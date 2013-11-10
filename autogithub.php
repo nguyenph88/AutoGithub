@@ -4,8 +4,8 @@ $pass = "1qazxsw2";
 
 $iMessage = "updated by AutoGithub nguyenph88@gmail.com - nguyenphuoc.net";
 $iPath = "test.txt";
-$iBodyContent = "update";
-$iSHA = "87156ad20f45a3a90e01b3b3a65aa8d1252c2b2a";
+$iBodyContent = "dXBkYXRl";
+$iSHA = "4f8a0fd8ab3537b85a64dcffa1487f4196164d78";
 $iRepo ="testrepo01";
 
 
@@ -16,22 +16,21 @@ editFileOnRepo($user, $pass, $iMessage, $iPath, $iBodyContent, $iRepo, $iSHA);
 
 function editFileOnRepo($username, $password, $message, $path, $bodyContent, $repo, $sha){
 	$c = curl_init();
-	$url = "/repos/:$username/$repo/contents/";
+	$url = "/repos/$username/$repo/contents/$path";
+	//PUT /repos/:owner/:repo/contents/:path
 
+	echo $url."\n";
 	curl_setopt($c, CURLOPT_VERBOSE, "false"); 
 	curl_setopt($c, CURLOPT_HTTPAUTH, CURLAUTH_BASIC); 
 	curl_setopt($c, CURLOPT_USERPWD, "$username:$password"); 
 	curl_setopt($c, CURLOPT_RETURNTRANSFER, true);
-	curl_setopt($c, CURLOPT_USERAGENT, "tan-tan.github-api");
+	curl_setopt($c, CURLOPT_USERAGENT, "testacc01");
 	curl_setopt($c, CURLOPT_HEADER, true);
 	curl_setopt($c, CURLOPT_FOLLOWLOCATION, true);
-	//PUT /repos/:owner/:repo/contents/:path
-			
 	
-	//curl_setopt($c, CURLOPT_CUSTOMREQUEST, 'PUT');
-	//curl_setopt($c, CURLOPT_PUT, true);
+	curl_setopt($c, CURLOPT_CUSTOMREQUEST, 'PUT');
+	curl_setopt($c, CURLOPT_PUT, true);
 	
-
 	$data = array();
 	$data['path'] = $path;
 	$data['message'] = $message;
@@ -49,24 +48,28 @@ function editFileOnRepo($username, $password, $message, $path, $bodyContent, $re
 	
 	echo $content;
 
-	curl_setopt($c, CURLOPT_CUSTOMREQUEST, "PUT"); 
-	curl_setopt($c, CURLOPT_POSTFIELDS,$content);
-	//$fileName = tempnam(sys_get_temp_dir(), 'gitPut');
-	//file_put_contents($fileName, $content);
-	//$f = fopen($fileName, 'rb');
-	//echo $f;
-	//curl_setopt($c, CURLOPT_INFILE, $f);
-	//curl_setopt($c, CURLOPT_INFILESIZE, strlen($content));
+	
+	$fp = fopen('php://temp/maxmemory:256000', 'w');
+	if (!$fp) {
+	    die('could not open temp memory data');
+	}
+	fwrite($fp, $content);
+	fseek($fp, 0); 
+
+	echo $fp;
+
+	curl_setopt($c, CURLOPT_BINARYTRANSFER, true);
+	curl_setopt($c, CURLOPT_INFILE, $fp); // file pointer
+	curl_setopt($c, CURLOPT_INFILESIZE, strlen($content));   
 	
 	error_log($url);
-
 
 	curl_setopt($c, CURLOPT_URL, $url);
 	curl_setopt($c, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_setopt($c, CURLOPT_SSL_VERIFYPEER, 0);
 
 	$response = curl_exec($c);
-	echo "response:".$response;
+	echo "\nresponse:".$response;
 	curl_close($c);
 }
 
