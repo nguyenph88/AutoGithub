@@ -1,12 +1,12 @@
 <?php
-$user = "testacc01";
-$pass = "1qazxsw2";
+$user = "yourusername";
+$pass = "yourpassword";
 
 $iMessage = "updated by AutoGithub nguyenph88@gmail.com - nguyenphuoc.net";
 $iPath = "test.txt";
 $iBodyContent = "dXBkYXRl";
 $iSHA = "4f8a0fd8ab3537b85a64dcffa1487f4196164d78";
-$iRepo ="testrepo01";
+$iRepo ="yourrepo";
 
 
 
