@@ -9,10 +9,14 @@ Notice
 ---------------
 Since Github has updated the way their API needs to be accessed and authenticated, the tool doesn't work anymore but you can feel free to look at their API and manupulate around the problem. They somehow removed my demo account so use at your own risk.
 
+This tool is for education purpose only.
+
 
 How It Works
 ---------------
 The concept is very simple, you need to create a temp repo which a temp file in it (eg: README.md). By using Github API, you can be able to connect to the API service, browse the file, update which a particular (random) content/message, commit and push it back. The process will count as 1 commit to the graph above and the color of that current date will be updated also. (remember to update everythin inside the file, also the blob)
+
+I keep the authenticate method very simple. Raw username/password needed to access the account. You can change it to other type of more secured login method.
 
 You can test it locally first and upload it the the website for mobile access. Every time you want to run the script then just visit www.yourwebsite.com/autogithub.php and the script will do the job.
 
