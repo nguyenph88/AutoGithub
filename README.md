@@ -32,3 +32,4 @@ The reason why I use PHP is because for most of the web hosting service, they wi
 You can use other languages like Java, C or NodeJS to access the API and do as above. But it's hard to find a web service that support cronjob for those. Heroku charges 2 dyno for it Scheduler (https://devcenter.heroku.com/articles/scheduler). That's the main reason I stick with PHP and Cpanel's Cronjob.
 
 .
+.
