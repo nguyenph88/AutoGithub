@@ -40,6 +40,3 @@ For Windows:
 
 For Linux:
 - Use cron job to run `task_nix.sh` daily
-
-
-pip install requests beautifulsoup4
