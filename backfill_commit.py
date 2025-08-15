@@ -47,6 +47,16 @@ def date_range_commit():
 def month_year_commit():
     """Handle month and year commit"""
     try:
+        # Warning message for greedy commit
+        print("\n⚠️  WARNING: This option will commit on ALL dates in the month/year,")
+        print("   including dates that already have commits (greedy commit).")
+        print("   This may create duplicate commits for the same date.")
+        
+        confirm = input("\nDo you want to continue? (y/n): ").lower().strip()
+        if confirm != 'y':
+            print("Operation cancelled. Returning to main menu.")
+            return
+        
         month_year_input = input("Enter month and year in mm/yyyy format: ")
         
         # Check if input contains exactly one '/'
@@ -258,7 +268,7 @@ print("--------------------------------")
 print("Backfill Commit Options:")
 print("1. Single date commit")
 print("2. Date range commit")
-print("3. Month and year commit")
+print("3. Month and year commit (greedy commit)")
 print("4. Month and year commit (skip existing)")
 choice = input("Enter your choice (1, 2, 3, or 4): ")
 
