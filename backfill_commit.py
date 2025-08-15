@@ -259,6 +259,173 @@ def month_year_commit_skip_existing():
     except Exception as e:
         print(f"Error: {e}")
 
+def year_commit():
+    """Handle year commit (greedy commit)"""
+    try:
+        # Warning message for greedy commit
+        print("\n⚠️  WARNING: This option will commit on ALL dates in the year,")
+        print("   including dates that already have commits (greedy commit).")
+        print("   This may create duplicate commits for the same date.")
+        
+        confirm = input("\nDo you want to continue? (y/n): ").lower().strip()
+        if confirm != 'y':
+            print("Operation cancelled. Returning to main menu.")
+            return
+        
+        year_input = input("Enter year (yyyy format): ")
+        
+        # Validate year is numeric
+        if not year_input.isdigit():
+            print("Error: Year must be a number")
+            return
+        
+        year = int(year_input)
+        
+        # Validate year range (reasonable range)
+        if year < 2000 or year > 2100:
+            print("Error: Year must be between 2000 and 2100")
+            return
+        
+        # Get current date
+        today = datetime.now()
+        current_year = today.year
+        
+        # Get the first day of the year
+        start_date = datetime(year, 1, 1)
+        
+        # Get the last day of the year
+        end_date = datetime(year, 12, 31)
+        
+        # Check if it's the current year
+        if year == current_year:
+            # For current year, only commit up to today
+            end_date = today
+            print(f"Backfilling commits for current year {year} from January 1st to today ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+        else:
+            # For past years, commit for the entire year
+            print(f"Backfilling commits for year {year} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+        
+        current_date = start_date
+        while current_date <= end_date:
+            date_string = perform_commit(current_date)
+            print(f"Commit completed for: {date_string}")
+            current_date += timedelta(days=1)
+            time.sleep(1)
+    except ValueError as e:
+        print(f"Error: Invalid year format. Please use yyyy format (e.g., 2023)")
+    except Exception as e:
+        print(f"Error: {e}")
+
+def year_commit_skip_existing():
+    """Handle year commit with skip existing dates"""
+    try:
+        year_input = input("Enter year (yyyy format): ")
+        
+        # Validate year is numeric
+        if not year_input.isdigit():
+            print("Error: Year must be a number")
+            return
+        
+        year = int(year_input)
+        
+        # Validate year range (reasonable range)
+        if year < 2000 or year > 2100:
+            print("Error: Year must be between 2000 and 2100")
+            return
+        
+        # Get current date
+        today = datetime.now()
+        current_year = today.year
+        
+        # Get the first day of the year
+        start_date = datetime(year, 1, 1)
+        
+        # Get the last day of the year
+        end_date = datetime(year, 12, 31)
+        
+        # Check if it's the current year
+        if year == current_year:
+            # For current year, only check up to today
+            end_date = today
+            print(f"Checking commits for current year {year} from January 1st to today ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+        else:
+            # For past years, check the entire year
+            print(f"Checking commits for year {year} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+        
+        # Extract existing commit dates
+        print("Analyzing existing commits...")
+        existing_dates = set()
+        
+        for commit in commits:
+            try:
+                # Parse the commit date
+                commit_date = datetime.strptime(commit.date, "%a %b %d %H:%M:%S %Y %z")
+                # Convert to date only for comparison
+                commit_date_only = commit_date.date()
+                
+                # Check if this commit is within our target year
+                if commit_date.year == year:
+                    existing_dates.add(commit_date_only)
+            except ValueError:
+                # Skip commits with unparseable dates
+                continue
+        
+        # Find dates that need commits
+        dates_to_commit = []
+        skipped_dates = []
+        
+        current_date = start_date
+        while current_date <= end_date:
+            current_date_only = current_date.date()
+            if current_date_only in existing_dates:
+                skipped_dates.append(current_date_only)
+            else:
+                dates_to_commit.append(current_date)
+            current_date += timedelta(days=1)
+        
+        # Show skipped dates (limit to first 20 for readability)
+        if skipped_dates:
+            print(f"\nSkipped dates (already committed) - showing first 20:")
+            for date in sorted(skipped_dates)[:20]:
+                print(f"  - {date.strftime('%Y-%m-%d')}")
+            if len(skipped_dates) > 20:
+                print(f"  ... and {len(skipped_dates) - 20} more dates")
+            print(f"Total skipped: {len(skipped_dates)} dates")
+        
+        # Show dates to commit (limit to first 20 for readability)
+        if dates_to_commit:
+            print(f"\nDates to commit - showing first 20:")
+            for date in dates_to_commit[:20]:
+                print(f"  - {date.strftime('%Y-%m-%d')}")
+            if len(dates_to_commit) > 20:
+                print(f"  ... and {len(dates_to_commit) - 20} more dates")
+            print(f"Total to commit: {len(dates_to_commit)} dates")
+        else:
+            print("\nAll dates in this year already have commits!")
+            return
+        
+        # Ask user if they want to continue
+        print(f"\nDo you want to continue with committing {len(dates_to_commit)} dates?")
+        continue_choice = input("Enter 'y' for yes, 'n' for no: ").lower().strip()
+        
+        if continue_choice != 'y':
+            print("Operation cancelled. Returning to main menu.")
+            return
+        
+        # Proceed with commits
+        print(f"\nStarting commits for {len(dates_to_commit)} dates...")
+        for i, date in enumerate(dates_to_commit, 1):
+            date_string = perform_commit(date)
+            print(f"Commit {i}/{len(dates_to_commit)} completed for: {date_string}")
+            time.sleep(1)
+        
+        print(f"\nCompleted! Successfully committed {len(dates_to_commit)} dates.")
+        
+    except ValueError as e:
+        print(f"Error: Invalid year format. Please use yyyy format (e.g., 2023)")
+    except Exception as e:
+        print(f"Error: {e}")
+
 # Menu
 print("--------------------------------")
 print(f"Current username: {extract_current_username()}")
@@ -270,7 +437,9 @@ print("1. Single date commit")
 print("2. Date range commit")
 print("3. Month and year commit (greedy commit)")
 print("4. Month and year commit (skip existing)")
-choice = input("Enter your choice (1, 2, 3, or 4): ")
+print("5. Year commit (greedy commit)")
+print("6. Year commit (skip existing)")
+choice = input("Enter your choice (1, 2, 3, 4, 5, or 6): ")
 
 if choice == "1":
     single_date_commit()
@@ -280,5 +449,9 @@ elif choice == "3":
     month_year_commit()
 elif choice == "4":
     month_year_commit_skip_existing()
+elif choice == "5":
+    year_commit()
+elif choice == "6":
+    year_commit_skip_existing()
 else:
-    print("Error: Please enter a valid choice (1, 2, 3, or 4)")
+    print("Error: Please enter a valid choice (1, 2, 3, 4, 5, or 6)")
