@@ -63,7 +63,7 @@ def extract_current_username():
         return username
     return None
 
-def extract_commit_date():
+def extract_commit():
     """Extract commit information from git log"""
     try:
         # Run git log command with specific format
