@@ -303,9 +303,10 @@ def display_commit_summary(skipped_dates, dates_to_commit, limit_display=20):
 
 def execute_commits(dates_to_commit):
     """Execute commits with appropriate processing method"""
-    if len(dates_to_commit) > 20:
+    if len(dates_to_commit) > 10:
         # Use batch processing for large numbers of commits
-        batch_size = min(20, len(dates_to_commit) // 5)  # Adaptive batch size
+        # Calculate optimal batch size: minimum of 10 or total_dates/5, but at least 5
+        batch_size = max(5, min(10, len(dates_to_commit) // 5))
         perform_batch_commits(dates_to_commit, batch_size)
     else:
         # Use regular processing for smaller numbers
@@ -330,3 +331,5 @@ def get_user_confirmation(message):
     print(f"\n{message}")
     continue_choice = input("Enter 'y' for yes, 'n' for no: ").lower().strip()
     return continue_choice == 'y'
+
+
