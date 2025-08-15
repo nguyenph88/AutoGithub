@@ -3,6 +3,10 @@ AutoGithub
 
 Want your Github's activity looks something cool like this? This tool will help :)
 
+Note: 
+- I only provide tool to commit, how to uncommit if you made a mistake, it's up to you.
+- For education purpose and my use only, I'm not responsible for what happened to your github or repo or commit if you use this.
+
 ![Image](demo.png?raw=true)
 
 Legacy v1

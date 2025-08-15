@@ -1,5 +1,6 @@
 import random
 import subprocess
+import os
 from datetime import datetime
 
 def generate_random_time():
@@ -17,8 +18,21 @@ def create_date_string(date_obj):
 
 def append_to_commit_file(date_string):
     """Add date string to commit.txt file"""
-    with open('commit.txt', 'a') as f:
-        f.write(date_string + '\n')
+    # Check file size (10KB = 10240 bytes)
+    try:
+        file_size = os.path.getsize('commit.txt')
+        if file_size > 10240:  # 10KB
+            # Empty the file and write at beginning
+            with open('commit.txt', 'w') as f:
+                f.write(date_string + '\n')
+        else:
+            # Append to existing content
+            with open('commit.txt', 'a') as f:
+                f.write(date_string + '\n')
+    except FileNotFoundError:
+        # File doesn't exist, create it
+        with open('commit.txt', 'w') as f:
+            f.write(date_string + '\n')
 
 def run_git_commands(date_string):
     """Run git add, commit, and push commands"""
