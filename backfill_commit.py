@@ -1,10 +1,15 @@
 from datetime import datetime, timedelta
 import time
-from git_utils import extract_current_username, perform_commit, extract_commit
+from git_utils import (
+    extract_current_username, perform_commit, extract_commit,
+    validate_date_input, get_date_range_for_month, get_date_range_for_year,
+    analyze_existing_commits, find_dates_to_commit, display_commit_summary,
+    execute_commits, show_greedy_warning, get_user_confirmation
+)
 
 # Get all commit information
 print("--------------------------------")
-print("Extracing commit information...")
+print("Extracting commit information...")
 commits = extract_commit()
 print(f"Extracted {len(commits)} commits")
 
@@ -12,11 +17,14 @@ def single_date_commit():
     """Handle single date commit"""
     try:
         date_input = input("Enter date in mm/dd/yyyy format: ")
-        user_date = datetime.strptime(date_input, "%m/%d/%Y")
+        user_date, error = validate_date_input(date_input, "mm/dd/yyyy")
+        
+        if error:
+            print(f"Error: {error}")
+            return
+        
         date_string = perform_commit(user_date)
         print(f"Backfill commit completed with date: {date_string}")
-    except ValueError:
-        print("Error: Please enter the date in mm/dd/yyyy format (e.g., 12/25/2023)")
     except Exception as e:
         print(f"Error: {e}")
 
@@ -26,104 +34,66 @@ def date_range_commit():
         start_date_input = input("Enter start date in mm/dd/yyyy format: ")
         end_date_input = input("Enter end date in mm/dd/yyyy format: ")
         
-        start_date = datetime.strptime(start_date_input, "%m/%d/%Y")
-        end_date = datetime.strptime(end_date_input, "%m/%d/%Y")
+        start_date, error = validate_date_input(start_date_input, "mm/dd/yyyy")
+        if error:
+            print(f"Error: {error}")
+            return
+        
+        end_date, error = validate_date_input(end_date_input, "mm/dd/yyyy")
+        if error:
+            print(f"Error: {error}")
+            return
         
         if start_date > end_date:
             print("Error: Start date cannot be after end date")
             return
         
+        total_days = (end_date - start_date).days + 1
+        print(f"Starting commits for {total_days} days...")
+        
         current_date = start_date
+        completed = 0
+        
         while current_date <= end_date:
+            completed += 1
             date_string = perform_commit(current_date)
-            print(f"Commit completed for: {date_string}")
+            print(f"Commit {completed}/{total_days} completed for: {date_string}")
             current_date += timedelta(days=1)
             time.sleep(1)
-    except ValueError:
-        print("Error: Please enter dates in mm/dd/yyyy format (e.g., 12/25/2023)")
     except Exception as e:
         print(f"Error: {e}")
 
 def month_year_commit():
-    """Handle month and year commit"""
+    """Handle month and year commit (greedy)"""
     try:
-        # Warning message for greedy commit
-        print("\n⚠️  WARNING: This option will commit on ALL dates in the month/year,")
-        print("   including dates that already have commits (greedy commit).")
-        print("   This may create duplicate commits for the same date.")
-        
-        confirm = input("\nDo you want to continue? (y/n): ").lower().strip()
-        if confirm != 'y':
+        if not show_greedy_warning():
             print("Operation cancelled. Returning to main menu.")
             return
         
         month_year_input = input("Enter month and year in mm/yyyy format: ")
+        parsed_input, error = validate_date_input(month_year_input, "mm/yyyy")
         
-        # Check if input contains exactly one '/'
-        if month_year_input.count('/') != 1:
-            print("Error: Please enter month and year in mm/yyyy format (e.g., 12/2023)")
+        if error:
+            print(f"Error: {error}")
             return
         
-        # Parse month and year
-        month, year = month_year_input.split('/')
+        month, year = parsed_input
+        start_date, end_date = get_date_range_for_month(month, year)
         
-        # Validate month and year are numeric
-        if not month.isdigit() or not year.isdigit():
-            print("Error: Month and year must be numbers")
-            return
+        print(f"Backfilling commits for {start_date.strftime('%B %Y')} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
         
-        month = int(month)
-        year = int(year)
-        
-        # Validate month range
-        if month < 1 or month > 12:
-            print("Error: Month must be between 1 and 12")
-            return
-        
-        # Validate year range (reasonable range)
-        if year < 2000 or year > 2100:
-            print("Error: Year must be between 2000 and 2100")
-            return
-        
-        # Get current date
-        today = datetime.now()
-        current_month = today.month
-        current_year = today.year
-        
-        # Get the first day of the month
-        start_date = datetime(year, month, 1)
-        
-        # Get the last day of the month
-        if month == 12:
-            end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            end_date = datetime(year, month + 1, 1) - timedelta(days=1)
-        
-        # Check if it's the current month and year
-        if month == current_month and year == current_year:
-            # For current month, start from today and go backwards to first day
-            if today.day == 1:
-                # If today is the first day, only commit for today
-                start_date = today
-                end_date = today
-                print(f"Today is the first day of {start_date.strftime('%B %Y')}. Backfilling commit for today only.")
-            else:
-                # Start from today and go backwards to first day of month
-                start_date = datetime(year, month, 1)
-                end_date = today
-                print(f"Backfilling commits for current month {start_date.strftime('%B %Y')} from first day to today ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
-        else:
-            # For past months, commit for the entire month
-            print(f"Backfilling commits for {start_date.strftime('%B %Y')} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+        total_days = (end_date - start_date).days + 1
+        print(f"Starting commits for {total_days} days...")
         
         current_date = start_date
+        completed = 0
+        
         while current_date <= end_date:
+            completed += 1
             date_string = perform_commit(current_date)
-            print(f"Commit completed for: {date_string}")
+            print(f"Commit {completed}/{total_days} completed for: {date_string}")
             current_date += timedelta(days=1)
             time.sleep(1)
-    except ValueError as e:
-        print(f"Error: Invalid date format. Please use mm/yyyy format (e.g., 12/2023)")
     except Exception as e:
         print(f"Error: {e}")
 
@@ -131,188 +101,69 @@ def month_year_commit_skip_existing():
     """Handle month and year commit with skip existing dates"""
     try:
         month_year_input = input("Enter month and year in mm/yyyy format: ")
+        parsed_input, error = validate_date_input(month_year_input, "mm/yyyy")
         
-        # Check if input contains exactly one '/'
-        if month_year_input.count('/') != 1:
-            print("Error: Please enter month and year in mm/yyyy format (e.g., 12/2023)")
+        if error:
+            print(f"Error: {error}")
             return
         
-        # Parse month and year
-        month, year = month_year_input.split('/')
+        month, year = parsed_input
+        start_date, end_date = get_date_range_for_month(month, year)
         
-        # Validate month and year are numeric
-        if not month.isdigit() or not year.isdigit():
-            print("Error: Month and year must be numbers")
-            return
+        print(f"Checking commits for {start_date.strftime('%B %Y')} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
         
-        month = int(month)
-        year = int(year)
-        
-        # Validate month range
-        if month < 1 or month > 12:
-            print("Error: Month must be between 1 and 12")
-            return
-        
-        # Validate year range (reasonable range)
-        if year < 2000 or year > 2100:
-            print("Error: Year must be between 2000 and 2100")
-            return
-        
-        # Get current date
-        today = datetime.now()
-        current_month = today.month
-        current_year = today.year
-        
-        # Get the first day of the month
-        start_date = datetime(year, month, 1)
-        
-        # Get the last day of the month
-        if month == 12:
-            end_date = datetime(year + 1, 1, 1) - timedelta(days=1)
-        else:
-            end_date = datetime(year, month + 1, 1) - timedelta(days=1)
-        
-        # Check if it's the current month and year
-        if month == current_month and year == current_year:
-            # For current month, start from today and go backwards to first day
-            if today.day == 1:
-                # If today is the first day, only commit for today
-                start_date = today
-                end_date = today
-                print(f"Today is the first day of {start_date.strftime('%B %Y')}. Backfilling commit for today only.")
-            else:
-                # Start from today and go backwards to first day of month
-                start_date = datetime(year, month, 1)
-                end_date = today
-                print(f"Checking commits for current month {start_date.strftime('%B %Y')} from first day to today ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
-        else:
-            # For past months, commit for the entire month
-            print(f"Checking commits for {start_date.strftime('%B %Y')} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
-        
-        # Extract existing commit dates
+        # Analyze existing commits
         print("Analyzing existing commits...")
-        existing_dates = set()
+        existing_dates = analyze_existing_commits(commits, start_date, end_date, "month", month, year)
         
-        for commit in commits:
-            try:
-                # Parse the commit date
-                commit_date = datetime.strptime(commit.date, "%a %b %d %H:%M:%S %Y %z")
-                # Convert to date only for comparison
-                commit_date_only = commit_date.date()
-                
-                # Check if this commit is within our target month/year
-                if commit_date.year == year and commit_date.month == month:
-                    existing_dates.add(commit_date_only)
-            except ValueError:
-                # Skip commits with unparseable dates
-                continue
+        # Find dates to commit
+        dates_to_commit, skipped_dates = find_dates_to_commit(start_date, end_date, existing_dates)
         
-        # Find dates that need commits
-        dates_to_commit = []
-        skipped_dates = []
-        
-        current_date = start_date
-        while current_date <= end_date:
-            current_date_only = current_date.date()
-            if current_date_only in existing_dates:
-                skipped_dates.append(current_date_only)
-            else:
-                dates_to_commit.append(current_date)
-            current_date += timedelta(days=1)
-        
-        # Show skipped dates
-        if skipped_dates:
-            print(f"\nSkipped dates (already committed):")
-            for date in sorted(skipped_dates):
-                print(f"  - {date.strftime('%Y-%m-%d')}")
-            print(f"Total skipped: {len(skipped_dates)} dates")
-        
-        # Show dates to commit
-        if dates_to_commit:
-            print(f"\nDates to commit:")
-            for date in dates_to_commit:
-                print(f"  - {date.strftime('%Y-%m-%d')}")
-            print(f"Total to commit: {len(dates_to_commit)} dates")
-        else:
-            print("\nAll dates in this month already have commits!")
+        # Display summary
+        if not display_commit_summary(skipped_dates, dates_to_commit):
             return
         
-        # Ask user if they want to continue
-        print(f"\nDo you want to continue with committing {len(dates_to_commit)} dates?")
-        continue_choice = input("Enter 'y' for yes, 'n' for no: ").lower().strip()
-        
-        if continue_choice != 'y':
+        # Get user confirmation
+        if not get_user_confirmation(f"Do you want to continue with committing {len(dates_to_commit)} dates?"):
             print("Operation cancelled. Returning to main menu.")
             return
         
-        # Proceed with commits
-        print(f"\nStarting commits for {len(dates_to_commit)} dates...")
-        for i, date in enumerate(dates_to_commit, 1):
-            date_string = perform_commit(date)
-            print(f"Commit {i}/{len(dates_to_commit)} completed for: {date_string}")
-            time.sleep(1)
+        # Execute commits
+        execute_commits(dates_to_commit)
         
-        print(f"\nCompleted! Successfully committed {len(dates_to_commit)} dates.")
-        
-    except ValueError as e:
-        print(f"Error: Invalid date format. Please use mm/yyyy format (e.g., 12/2023)")
     except Exception as e:
         print(f"Error: {e}")
 
 def year_commit():
-    """Handle year commit (greedy commit)"""
+    """Handle year commit (greedy)"""
     try:
-        # Warning message for greedy commit
-        print("\n⚠️  WARNING: This option will commit on ALL dates in the year,")
-        print("   including dates that already have commits (greedy commit).")
-        print("   This may create duplicate commits for the same date.")
-        
-        confirm = input("\nDo you want to continue? (y/n): ").lower().strip()
-        if confirm != 'y':
+        if not show_greedy_warning():
             print("Operation cancelled. Returning to main menu.")
             return
         
         year_input = input("Enter year (yyyy format): ")
+        year, error = validate_date_input(year_input, "yyyy")
         
-        # Validate year is numeric
-        if not year_input.isdigit():
-            print("Error: Year must be a number")
+        if error:
+            print(f"Error: {error}")
             return
         
-        year = int(year_input)
+        start_date, end_date = get_date_range_for_year(year)
         
-        # Validate year range (reasonable range)
-        if year < 2000 or year > 2100:
-            print("Error: Year must be between 2000 and 2100")
-            return
+        print(f"Backfilling commits for year {year} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
         
-        # Get current date
-        today = datetime.now()
-        current_year = today.year
-        
-        # Get the first day of the year
-        start_date = datetime(year, 1, 1)
-        
-        # Get the last day of the year
-        end_date = datetime(year, 12, 31)
-        
-        # Check if it's the current year
-        if year == current_year:
-            # For current year, only commit up to today
-            end_date = today
-            print(f"Backfilling commits for current year {year} from January 1st to today ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
-        else:
-            # For past years, commit for the entire year
-            print(f"Backfilling commits for year {year} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
+        total_days = (end_date - start_date).days + 1
+        print(f"Starting commits for {total_days} days...")
         
         current_date = start_date
+        completed = 0
+        
         while current_date <= end_date:
+            completed += 1
             date_string = perform_commit(current_date)
-            print(f"Commit completed for: {date_string}")
+            print(f"Commit {completed}/{total_days} completed for: {date_string}")
             current_date += timedelta(days=1)
             time.sleep(1)
-    except ValueError as e:
-        print(f"Error: Invalid year format. Please use yyyy format (e.g., 2023)")
     except Exception as e:
         print(f"Error: {e}")
 
@@ -320,109 +171,35 @@ def year_commit_skip_existing():
     """Handle year commit with skip existing dates"""
     try:
         year_input = input("Enter year (yyyy format): ")
+        year, error = validate_date_input(year_input, "yyyy")
         
-        # Validate year is numeric
-        if not year_input.isdigit():
-            print("Error: Year must be a number")
+        if error:
+            print(f"Error: {error}")
             return
         
-        year = int(year_input)
+        start_date, end_date = get_date_range_for_year(year)
         
-        # Validate year range (reasonable range)
-        if year < 2000 or year > 2100:
-            print("Error: Year must be between 2000 and 2100")
-            return
+        print(f"Checking commits for year {year} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
         
-        # Get current date
-        today = datetime.now()
-        current_year = today.year
-        
-        # Get the first day of the year
-        start_date = datetime(year, 1, 1)
-        
-        # Get the last day of the year
-        end_date = datetime(year, 12, 31)
-        
-        # Check if it's the current year
-        if year == current_year:
-            # For current year, only check up to today
-            end_date = today
-            print(f"Checking commits for current year {year} from January 1st to today ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
-        else:
-            # For past years, check the entire year
-            print(f"Checking commits for year {year} ({start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')})")
-        
-        # Extract existing commit dates
+        # Analyze existing commits
         print("Analyzing existing commits...")
-        existing_dates = set()
+        existing_dates = analyze_existing_commits(commits, start_date, end_date, "year", target_year=year)
         
-        for commit in commits:
-            try:
-                # Parse the commit date
-                commit_date = datetime.strptime(commit.date, "%a %b %d %H:%M:%S %Y %z")
-                # Convert to date only for comparison
-                commit_date_only = commit_date.date()
-                
-                # Check if this commit is within our target year
-                if commit_date.year == year:
-                    existing_dates.add(commit_date_only)
-            except ValueError:
-                # Skip commits with unparseable dates
-                continue
+        # Find dates to commit
+        dates_to_commit, skipped_dates = find_dates_to_commit(start_date, end_date, existing_dates)
         
-        # Find dates that need commits
-        dates_to_commit = []
-        skipped_dates = []
-        
-        current_date = start_date
-        while current_date <= end_date:
-            current_date_only = current_date.date()
-            if current_date_only in existing_dates:
-                skipped_dates.append(current_date_only)
-            else:
-                dates_to_commit.append(current_date)
-            current_date += timedelta(days=1)
-        
-        # Show skipped dates (limit to first 20 for readability)
-        if skipped_dates:
-            print(f"\nSkipped dates (already committed) - showing first 20:")
-            for date in sorted(skipped_dates)[:20]:
-                print(f"  - {date.strftime('%Y-%m-%d')}")
-            if len(skipped_dates) > 20:
-                print(f"  ... and {len(skipped_dates) - 20} more dates")
-            print(f"Total skipped: {len(skipped_dates)} dates")
-        
-        # Show dates to commit (limit to first 20 for readability)
-        if dates_to_commit:
-            print(f"\nDates to commit - showing first 20:")
-            for date in dates_to_commit[:20]:
-                print(f"  - {date.strftime('%Y-%m-%d')}")
-            if len(dates_to_commit) > 20:
-                print(f"  ... and {len(dates_to_commit) - 20} more dates")
-            print(f"Total to commit: {len(dates_to_commit)} dates")
-        else:
-            print("\nAll dates in this year already have commits!")
+        # Display summary
+        if not display_commit_summary(skipped_dates, dates_to_commit):
             return
         
-        # Ask user if they want to continue
-        print(f"\nDo you want to continue with committing {len(dates_to_commit)} dates?")
-        continue_choice = input("Enter 'y' for yes, 'n' for no: ").lower().strip()
-        
-        if continue_choice != 'y':
+        # Get user confirmation
+        if not get_user_confirmation(f"Do you want to continue with committing {len(dates_to_commit)} dates?"):
             print("Operation cancelled. Returning to main menu.")
             return
         
-        # Proceed with commits
-        print(f"\nStarting commits for {len(dates_to_commit)} dates...")
-        for i, date in enumerate(dates_to_commit, 1):
-            date_string = perform_commit(date)
-            print(f"Commit {i}/{len(dates_to_commit)} completed for: {date_string}")
-            time.sleep(1)
+        # Execute commits
+        execute_commits(dates_to_commit)
         
-        print(f"\nCompleted! Successfully committed {len(dates_to_commit)} dates.")
-        
-    except ValueError as e:
-        print(f"Error: Invalid year format. Please use yyyy format (e.g., 2023)")
     except Exception as e:
         print(f"Error: {e}")
 
