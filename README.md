@@ -28,6 +28,7 @@ How To Make It Run Automatically As Schedule
 So of course as I usually do, I will take advantage of the automation process to make it run as scheduled.
 
 For Windows:
-- Use Task Scheduler to run task_windows.bat daily
+- Use Task Scheduler to run `task_windows.bat` daily
+
 For Linux:
-- Use cron job to run task_nix.sh daily
+- Use cron job to run `task_nix.sh` daily
