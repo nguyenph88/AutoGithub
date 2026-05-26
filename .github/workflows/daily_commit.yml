@@ -1,0 +1,35 @@
+name: Daily Contribution Commit
+
+on:
+  schedule:
+    - cron: '0 12 * * *'   # 12:00 UTC daily (4:00 AM PST)
+  workflow_dispatch:         # manual trigger for testing
+
+permissions:
+  contents: write            # allows git push back to the repo
+
+jobs:
+  commit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Configure git identity
+        run: |
+          git config user.name  "${{ secrets.GIT_USER_NAME }}"
+          git config user.email "${{ secrets.GIT_USER_EMAIL }}"
+
+      - name: Run daily commit script
+        run: python daily_commit.py
+
+      - name: Verify push
+        run: git log --oneline -3
